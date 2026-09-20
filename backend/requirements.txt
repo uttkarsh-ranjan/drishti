@@ -8,3 +8,4 @@ python-dotenv
 marshmallow
 GeoAlchemy2
 Flask-Bcrypt
+Pillow

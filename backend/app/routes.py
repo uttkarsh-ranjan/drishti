@@ -62,9 +62,76 @@ def get_assignments():
     ]
     return jsonify(assignments), 200
 
+from .utils import verify_hash, get_exif_datetime, verify_timestamp
+from sqlalchemy import func
+
 @bp.route('/api/evidence/submit', methods=['POST'])
 @jwt_required()
 def submit_evidence():
-    # In a real scenario, handle multipart form data containing image/video, 
-    # check EXIF, verify hash, and calculate Haversine distance via PostGIS.
-    return jsonify({"msg": "Evidence accepted and sent to AI pipeline for review"}), 202
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    if user.role.name != 'PMU_Inspector':
+        return jsonify({"msg": "Unauthorized. Only PMU Inspectors can submit evidence."}), 403
+
+    # Parse request data
+    assignment_id = request.form.get('assignment_id')
+    submitted_hash = request.form.get('evidence_hash')
+    inspector_lat = request.form.get('latitude')
+    inspector_lon = request.form.get('longitude')
+    
+    if 'media' not in request.files:
+        return jsonify({"msg": "No media file provided."}), 400
+        
+    media_file = request.files['media']
+    file_bytes = media_file.read()
+
+    # 1. Zero-Trust Check: Cryptographic Hash
+    if not verify_hash(file_bytes, submitted_hash):
+        return jsonify({"msg": "Evidence rejected: Media payload has been tampered with or corrupted in transit.", "error_code": "HASH_MISMATCH"}), 403
+
+    # 2. Zero-Trust Check: EXIF Timestamp Validation
+    exif_datetime = get_exif_datetime(file_bytes)
+    if not verify_timestamp(exif_datetime):
+        return jsonify({"msg": "Evidence rejected: EXIF timestamp is missing or deviates more than 30 seconds from server UTC (Potential pre-captured image).", "error_code": "TIMESTAMP_VIOLATION"}), 403
+
+    # 3. Zero-Trust Check: Haversine Geo-fence
+    assignment = Assignment.query.get(assignment_id)
+    if not assignment or assignment.inspector_id != current_user_id:
+        return jsonify({"msg": "Invalid assignment."}), 400
+        
+    institution = Institution.query.get(assignment.institution_id)
+    
+    # Construct PostGIS Point for inspector
+    inspector_point = f'SRID=4326;POINT({inspector_lon} {inspector_lat})'
+    
+    # Query database to calculate distance using ST_DistanceSphere (returns meters)
+    distance_query = db.session.query(
+        func.ST_DistanceSphere(
+            func.ST_GeomFromEWKT(inspector_point), 
+            institution.location
+        ).label('distance')
+    ).first()
+    
+    distance = distance_query.distance if distance_query else float('inf')
+    
+    if distance > 200:
+        return jsonify({"msg": f"Evidence rejected: Inspector is {distance:.2f} meters away. Must be within 200 meters of the institution.", "error_code": "GEOFENCE_VIOLATION"}), 403
+
+    # If all checks pass, save to Object Store (placeholder for S3 upload) and save log to DB
+    log = InspectionLog(
+        assignment_id=assignment_id,
+        inspector_gps=inspector_point,
+        distance_from_centroid=distance,
+        evidence_hash=submitted_hash,
+        capture_time=exif_datetime,
+        status='Accepted'
+    )
+    
+    db.session.add(log)
+    db.session.commit()
+
+    # Trigger async AI Analytics here (Celery task placeholder)
+    # process_evidence.delay(log.id, file_bytes)
+
+    return jsonify({"msg": "Evidence accepted, verified, and sent to AI pipeline for review", "distance_meters": distance}), 202
