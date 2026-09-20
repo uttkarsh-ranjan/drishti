@@ -87,12 +87,14 @@ npm -v
 # Install dependencies
 sudo apt-get install curl git unzip xz-utils zip libglu1-mesa
 
-# Download Flutter SDK (replace with latest version link if needed)
-wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.0-stable.tar.xz
-
-# Extract to an installation directory (e.g., ~/development)
+# Create an installation directory (e.g., ~/development)
 mkdir -p ~/development
-tar xf flutter_linux_3.24.0-stable.tar.xz -C ~/development/
+
+# Move into the installation directory & download and extract the Flutter SDK (replace with latest version link if needed)
+cd /home/utt/development
+wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.4-stable.tar.xz -O flutter.tar.xz
+tar xf flutter.tar.xz
+rm flutter.tar.xz
 
 # Add flutter to your PATH (Add this line to your ~/.bashrc or ~/.zshrc)
 export PATH="$PATH:$HOME/development/flutter/bin"

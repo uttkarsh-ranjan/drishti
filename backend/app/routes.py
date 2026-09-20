@@ -167,3 +167,29 @@ def submit_evidence():
     process_evidence.delay(log.id)
 
     return jsonify({"msg": "Evidence accepted, verified, and sent to AI pipeline for review", "distance_meters": distance}), 202
+
+import os
+from livekit import api
+
+@bp.route('/api/livekit/token', methods=['GET'])
+@jwt_required()
+def get_livekit_token():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    room_name = request.args.get('room', 'command_centre')
+    
+    # We allow both Admin and Inspectors, or maybe just DoSJE officials?
+    if user.role.name not in ['DoSJE_Official', 'NGO_Admin', 'PMU_Inspector']:
+        return jsonify({"msg": "Unauthorized"}), 403
+
+    # Generate token using livekit-api
+    token = api.AccessToken(os.getenv('LIVEKIT_API_KEY', 'devkey'), os.getenv('LIVEKIT_API_SECRET', 'secret'))
+    token = token.with_identity(f"{user.username}_{user.id}").with_name(user.username)
+    token = token.with_grants(api.VideoGrants(
+        room_join=True,
+        room=room_name,
+        can_publish=True,
+        can_subscribe=True
+    ))
+
+    return jsonify({"token": token.to_jwt()}), 200

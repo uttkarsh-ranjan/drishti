@@ -16,39 +16,62 @@ def process_evidence(self, log_id, file_path_or_bytes=None):
     if not log:
         return {"status": "error", "msg": "Inspection log not found"}
 
-    # Mocking AI Inference times and logic
     # In production, this would call PyTorch / OpenCV models directly
-    
-    time.sleep(2) # Simulate processing time
+    from .ai_engine import ai_pipeline
+    import os
 
-    # 1. Crowd & Attendance Estimation (MobileNetV3-Small mock)
+    # If file bytes are passed, save them temporarily for OpenCV
+    temp_path = f"/tmp/evidence_{log.id}.jpg"
+    if file_path_or_bytes:
+        with open(temp_path, "wb") as f:
+            f.write(file_path_or_bytes)
+            
+    # 1. Crowd & Attendance Estimation (Computer Vision)
+    reported_attendance = 50 # Mock from assignment data
+    estimated_count, conf = ai_pipeline.estimate_crowd(temp_path)
+    
     # Alerts if |Estimated - Reported| / Reported > 0.25
-    crowd_discrepancy = random.random() # Mock discrepancy ratio
+    crowd_discrepancy = abs(estimated_count - reported_attendance) / max(1, reported_attendance)
     
     if crowd_discrepancy > 0.25:
         anomaly1 = Anomaly(
             inspection_id=log.id,
             anomaly_type='Crowd Size Discrepancy',
             risk_score=min(crowd_discrepancy + 0.3, 1.0),
-            shap_explanation={"feature_contributions": {"crowd_density_map": 0.8, "reported_attendance": 0.2}}
+            shap_explanation={
+                "feature_contributions": {
+                    f"Density Map Count ({estimated_count})": 0.8, 
+                    f"Reported Attendance ({reported_attendance})": 0.2
+                }
+            }
         )
         db.session.add(anomaly1)
 
     # 2. Proxy Beneficiary Detection (dlib ResNet mock)
-    # L2 distance < 0.45 threshold
-    proxy_detected = random.choice([True, False, False, False]) # 25% chance for mock
+    # L2 distance > 0.45 threshold means proxy detected
+    authorized_encodings_mock = [] 
+    is_proxy, l2_dist, shap_impact = ai_pipeline.detect_proxy(temp_path, authorized_encodings_mock)
     
-    if proxy_detected:
+    if is_proxy:
         anomaly2 = Anomaly(
             inspection_id=log.id,
             anomaly_type='Proxy Beneficiary Detected',
-            risk_score=0.92,
-            shap_explanation={"feature_contributions": {"l2_face_distance": 0.95, "facial_landmarks": 0.05}}
+            risk_score=min(0.99, l2_dist + 0.2),
+            shap_explanation={
+                "feature_contributions": {
+                    f"L2 Face Distance ({l2_dist:.2f})": shap_impact, 
+                    "Facial Landmarks": 100 - shap_impact
+                }
+            }
         )
         db.session.add(anomaly2)
 
     db.session.commit()
-    return {"status": "success", "log_id": log_id, "anomalies_found": int(crowd_discrepancy > 0.25) + int(proxy_detected)}
+    
+    if os.path.exists(temp_path):
+        os.remove(temp_path)
+        
+    return {"status": "success", "log_id": log_id, "anomalies_found": int(crowd_discrepancy > 0.25) + int(is_proxy)}
 
 
 # --- MODULE B: Constraint-Satisfaction Assignment Engine ---
@@ -128,6 +151,26 @@ def generate_daily_assignments(self):
             
     db.session.commit()
     
-    # In production, dispatch FCM Push Notifications here!
+    # Dispatch FCM Push Notifications
+    try:
+        import firebase_admin
+        from firebase_admin import messaging
+        if not firebase_admin._apps:
+            # Requires GOOGLE_APPLICATION_CREDENTIALS environment variable
+            firebase_admin.initialize_app()
+            
+        for assignment_str in assignments_created:
+            # In a real app, fetch the user's FCM device token from the DB
+            message = messaging.Message(
+                notification=messaging.Notification(
+                    title='New Surprise Inspection Assigned',
+                    body=f'You have a new assignment. Please check the Drishti app for details.'
+                ),
+                topic='pmu_inspectors' # For testing, broadcast to a topic
+            )
+            messaging.send(message)
+    except Exception as e:
+        print(f"FCM Notification Error: {e}")
+        # Continue execution even if push fails
     
     return {"status": "success", "assignments": assignments_created}

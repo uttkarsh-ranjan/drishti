@@ -31,5 +31,13 @@ services:
     volumes:
       - .:/app
 
+  mediamtx:
+    image: bluenviron/mediamtx:latest-ffmpeg
+    ports:
+      - "8554:8554"   # RTSP
+      - "8889:8889"   # WebRTC
+      - "1935:1935"   # RTMP
+      - "8888:8888"   # HLS
+
 volumes:
   postgres_data:

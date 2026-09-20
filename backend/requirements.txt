@@ -10,3 +10,7 @@ GeoAlchemy2
 Flask-Bcrypt
 Pillow
 Flask-CORS
+livekit-api
+livekit
+firebase-admin
+opencv-python-headless
