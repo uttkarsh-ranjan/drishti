@@ -3,6 +3,7 @@ from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 from .config import Config
 from .models import db
+from .celery_app import init_celery, celery
 
 bcrypt = Bcrypt()
 jwt = JWTManager()
@@ -15,6 +16,9 @@ def create_app():
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    
+    # Initialize Celery
+    init_celery(app)
 
     # Create tables (for development only, use migrations in production)
     with app.app_context():

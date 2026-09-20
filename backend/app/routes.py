@@ -132,6 +132,7 @@ def submit_evidence():
     db.session.commit()
 
     # Trigger async AI Analytics here (Celery task placeholder)
-    # process_evidence.delay(log.id, file_bytes)
+    from .tasks import process_evidence
+    process_evidence.delay(log.id)
 
     return jsonify({"msg": "Evidence accepted, verified, and sent to AI pipeline for review", "distance_meters": distance}), 202
