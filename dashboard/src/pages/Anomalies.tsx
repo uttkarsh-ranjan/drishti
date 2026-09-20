@@ -1,38 +1,50 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
-const mockAnomalies = [
-  {
-    id: 101,
-    ngo: 'Bright Future Institute',
-    type: 'Proxy Beneficiary Detected',
-    score: 0.92,
-    time: '10 mins ago',
-    shap: [
-      { feature: 'L2 Face Distance', impact: 85, color: 'bg-red-500' },
-      { feature: 'Facial Landmarks', impact: 15, color: 'bg-orange-400' }
-    ]
-  },
-  {
-    id: 102,
-    ngo: 'Skill India Hub - Delhi',
-    type: 'Crowd Size Discrepancy',
-    score: 0.84,
-    time: '2 hours ago',
-    shap: [
-      { feature: 'Density Map Count (20)', impact: 70, color: 'bg-red-500' },
-      { feature: 'Reported Attendance (55)', impact: 30, color: 'bg-orange-400' }
-    ]
-  }
-];
+interface ShapFeature {
+  feature: string;
+  impact: number;
+  color: string;
+}
+
+interface AnomalyData {
+  id: number;
+  ngo: string;
+  type: string;
+  score: number;
+  time: string;
+  shap: ShapFeature[];
+}
 
 const Anomalies = () => {
+  const [anomalies, setAnomalies] = useState<AnomalyData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Fetch anomalies from Flask API
+    axios.get('http://localhost:5000/api/anomalies')
+      .then(response => {
+        setAnomalies(response.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching anomalies:", err);
+        setError('Failed to load AI risk alerts from the server. Ensure the Flask API is running.');
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <div className="flex-1 p-8 bg-slate-50 min-h-screen">
       <h2 className="text-3xl font-bold text-slate-800 mb-2">AI Risk Alerts</h2>
       <p className="text-slate-500 mb-8">Review anomalies flagged by the PyTorch/dlib async pipeline.</p>
 
+      {loading && <p className="text-slate-500 animate-pulse">Loading alerts from AI Engine...</p>}
+      {error && <p className="text-red-500 font-medium">{error}</p>}
+
       <div className="space-y-6">
-        {mockAnomalies.map((alert) => (
+        {anomalies.map((alert) => (
           <div key={alert.id} className="bg-white p-6 rounded-lg shadow border-l-4 border-red-500 flex flex-col md:flex-row gap-6">
             
             {/* Alert Summary */}

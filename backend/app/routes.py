@@ -62,6 +62,37 @@ def get_assignments():
     ]
     return jsonify(assignments), 200
 
+@bp.route('/api/anomalies', methods=['GET'])
+# @jwt_required() # Commented out for easier testing without frontend login token
+def get_anomalies():
+    # In production, query the Anomaly table: Anomaly.query.order_by(Anomaly.created_at.desc()).all()
+    # Mocking for the dashboard integration:
+    mock_anomalies = [
+        {
+            "id": 101,
+            "ngo": "Bright Future Institute",
+            "type": "Proxy Beneficiary Detected",
+            "score": 0.92,
+            "time": "10 mins ago",
+            "shap": [
+                { "feature": "L2 Face Distance", "impact": 85, "color": "bg-red-500" },
+                { "feature": "Facial Landmarks", "impact": 15, "color": "bg-orange-400" }
+            ]
+        },
+        {
+            "id": 102,
+            "ngo": "Skill India Hub - Delhi",
+            "type": "Crowd Size Discrepancy",
+            "score": 0.84,
+            "time": "2 hours ago",
+            "shap": [
+                { "feature": "Density Map Count (20)", "impact": 70, "color": "bg-red-500" },
+                { "feature": "Reported Attendance (55)", "impact": 30, "color": "bg-orange-400" }
+            ]
+        }
+    ]
+    return jsonify(mock_anomalies), 200
+
 from .utils import verify_hash, get_exif_datetime, verify_timestamp
 from sqlalchemy import func
 

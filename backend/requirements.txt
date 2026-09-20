@@ -9,3 +9,4 @@ marshmallow
 GeoAlchemy2
 Flask-Bcrypt
 Pillow
+Flask-CORS
