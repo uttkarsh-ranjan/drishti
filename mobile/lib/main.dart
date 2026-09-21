@@ -10,6 +10,13 @@ import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
+// 10.0.2.2 reaches host machine from Android Emulator.
+// On Linux/Chrome desktop, use localhost directly.
+const String kApiBase = String.fromEnvironment(
+  'API_BASE',
+  defaultValue: 'http://localhost:5000',
+);
+
 List<CameraDescription> cameras = [];
 String? jwtToken;
 
@@ -197,7 +204,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
       try {
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('http://10.0.2.2:5000/api/evidence/submit'),
+          Uri.parse('$kApiBase/api/evidence/submit'),
         );
         
         if (jwtToken != null) {
@@ -299,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/auth/login'),
+        Uri.parse('$kApiBase/api/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': _emailController.text,
