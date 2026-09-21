@@ -18,7 +18,7 @@ Future<void> main() async {
   try {
     cameras = await availableCameras();
   } on CameraException catch (e) {
-    print('Error in fetching the cameras: $e');
+    debugPrint('Error in fetching the cameras: $e');
   }
   
   await DatabaseHelper.initDb();
@@ -85,98 +85,6 @@ class DrishtiApp extends StatelessWidget {
       ),
       home: jwtToken != null ? const InspectionScreen() : const LoginScreen(),
     );
-  }
-}
-
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _loading = false;
-  
-  Future<void> _login() async {
-    setState(() => _loading = true);
-    try {
-      final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': _emailController.text,
-          'password': _passwordController.text,
-        }),
-      );
-      
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final token = data['access_token'];
-        
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', token);
-        jwtToken = token;
-        
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const InspectionScreen()),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Login failed')));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    } finally {
-      setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Drishti Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email')),
-            TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
-            const SizedBox(height: 20),
-            _loading 
-              ? const CircularProgressIndicator()
-              : ElevatedButton(onPressed: _login, child: const Text('Login')),
-          ],
-        ),
-      ),
-    );
-  }
-}  
-  static Future<int> insertInspection(String path, double lat, double lng, String time) async {
-    return await db.insert('inspections', {
-      'evidence_path': path,
-      'latitude': lat,
-      'longitude': lng,
-      'timestamp': time,
-      'synced': 0,
-    });
-  }
-  
-  static Future<List<Map<String, dynamic>>> getUnsynced() async {
-    return await db.query('inspections', where: 'synced = 0');
-  }
-  
-  static Future<void> markSynced(int id) async {
-    await db.update('inspections', {'synced': 1}, where: 'id = ?', whereArgs: [id]);
   }
 }
 
@@ -252,6 +160,12 @@ class _InspectionScreenState extends State<InspectionScreen> {
       setState(() => _status = "Error: GPS not acquired yet.");
       return;
     }
+
+    // Enforce 200 m geofence before allowing capture
+    if (!_checkGeofence(_currentPosition!.latitude, _currentPosition!.longitude)) {
+      setState(() => _status = "Error: You are not within 200m of the assigned institution.");
+      return;
+    }
     
     setState(() {
       _isVerifying = true;
@@ -271,7 +185,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
       await _syncWithBackend();
       
     } catch (e) {
-      setState(() => _status = "Capture failed: \$e");
+      setState(() => _status = "Capture failed: $e");
     } finally {
       setState(() => _isVerifying = false);
     }
@@ -281,13 +195,16 @@ class _InspectionScreenState extends State<InspectionScreen> {
     final unsynced = await DatabaseHelper.getUnsynced();
     for (var record in unsynced) {
       try {
-        var request = http.MultipartRequest('POST', Uri.parse('http://10.0.2.2:5000/api/evidence/submit')); // 10.0.2.2 is localhost for Android Emulator
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('http://10.0.2.2:5000/api/evidence/submit'),
+        );
         
         if (jwtToken != null) {
           request.headers['Authorization'] = 'Bearer $jwtToken';
         }
         
-        // Calculate hash of file for zero-trust API
+        // Calculate SHA-256 hash of file for zero-trust API
         final fileBytes = File(record['evidence_path']).readAsBytesSync();
         final digest = sha256.convert(fileBytes);
         
@@ -299,12 +216,12 @@ class _InspectionScreenState extends State<InspectionScreen> {
         request.files.add(await http.MultipartFile.fromPath('media', record['evidence_path']));
         
         var response = await request.send();
-        if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        if (response.statusCode == 202) {
           await DatabaseHelper.markSynced(record['id']);
-          setState(() => _status = "Sync successful!");
+          setState(() => _status = "Sync successful! AI pipeline triggered.");
         } else {
-          var responseData = await response.stream.bytesToString();
-          setState(() => _status = "Sync failed: \$responseData");
+          setState(() => _status = "Sync failed (${response.statusCode}): $responseData");
         }
       } catch (e) {
         setState(() => _status = "Offline mode: Will sync when connection is restored.");
@@ -361,6 +278,80 @@ class _InspectionScreenState extends State<InspectionScreen> {
             ),
           )
         ],
+      ),
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _loading = false;
+  
+  Future<void> _login() async {
+    setState(() => _loading = true);
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:5000/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': _emailController.text,
+          'password': _passwordController.text,
+        }),
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['access_token'];
+        
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', token);
+        jwtToken = token;
+        
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const InspectionScreen()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Login failed')));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Drishti Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
+            const SizedBox(height: 20),
+            _loading 
+              ? const CircularProgressIndicator()
+              : ElevatedButton(onPressed: _login, child: const Text('Login')),
+          ],
+        ),
       ),
     );
   }

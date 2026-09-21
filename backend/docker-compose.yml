@@ -31,6 +31,20 @@ services:
     volumes:
       - .:/app
 
+  worker:
+    build: .
+    command: celery -A app.celery_worker.celery worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/drishti
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+      - api
+    volumes:
+      - .:/app
+
   mediamtx:
     image: bluenviron/mediamtx:latest-ffmpeg
     ports:

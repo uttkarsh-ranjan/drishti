@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from .models import db, User, Role
+from .models import db, User, Role, Assignment, Institution, InspectionLog, Anomaly
 from . import bcrypt
 
 bp = Blueprint('main', __name__)
@@ -63,10 +63,31 @@ def get_assignments():
     return jsonify(assignments), 200
 
 @bp.route('/api/anomalies', methods=['GET'])
-# @jwt_required() # Commented out for easier testing without frontend login token
 def get_anomalies():
-    # In production, query the Anomaly table: Anomaly.query.order_by(Anomaly.created_at.desc()).all()
-    # Mocking for the dashboard integration:
+    """Fetch real anomalies from DB, fall back to demo data if none exist yet."""
+    real_anomalies = Anomaly.query.order_by(Anomaly.created_at.desc()).limit(20).all()
+
+    if real_anomalies:
+        result = []
+        for a in real_anomalies:
+            shap = []
+            if a.shap_explanation and 'feature_contributions' in a.shap_explanation:
+                for feat, impact in a.shap_explanation['feature_contributions'].items():
+                    impact_pct = int(impact * 100) if isinstance(impact, float) and impact <= 1.0 else int(impact)
+                    color = "bg-red-500" if impact_pct >= 50 else "bg-orange-400"
+                    shap.append({"feature": feat, "impact": impact_pct, "color": color})
+            result.append({
+                "id": a.id,
+                "ngo": f"NGO (Inspection #{a.inspection_id})",
+                "type": a.anomaly_type,
+                "score": round(a.risk_score, 2),
+                "time": a.created_at.strftime('%d %b %Y, %H:%M UTC') if a.created_at else "N/A",
+                "shap": shap,
+                "reviewer_action": a.reviewer_action,
+            })
+        return jsonify(result), 200
+
+    # Demo seed data (shown before any real inspections are processed)
     mock_anomalies = [
         {
             "id": 101,
@@ -91,7 +112,6 @@ def get_anomalies():
             ]
         }
     ]
-    return jsonify(mock_anomalies), 200
 
 from .utils import verify_hash, get_exif_datetime, verify_timestamp
 from sqlalchemy import func

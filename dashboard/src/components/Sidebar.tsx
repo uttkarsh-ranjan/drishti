@@ -1,12 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
   const location = useLocation();
+  const { logout, role } = useAuth();
 
   const links = [
-    { path: '/', label: 'Live Command Centre' },
-    { path: '/anomalies', label: 'AI Risk Alerts' },
-    { path: '/inspections', label: 'Inspection Logs' },
+    { path: '/', label: '📹 Live Command Centre' },
+    { path: '/anomalies', label: '⚠️ AI Risk Alerts' },
+    { path: '/inspections', label: '📋 Inspection Logs' },
   ];
 
   return (
@@ -37,7 +39,13 @@ const Sidebar = () => {
 
       <div className="mt-auto p-4 bg-slate-800 rounded-md">
         <p className="text-sm font-semibold">Logged in as:</p>
-        <p className="text-xs text-blue-300">DoSJE Official</p>
+        <p className="text-xs text-blue-300 mb-3">{role ?? 'DoSJE Official'}</p>
+        <button
+          onClick={logout}
+          className="w-full text-xs bg-red-700 hover:bg-red-600 text-white py-1.5 rounded transition-colors"
+        >
+          Sign Out
+        </button>
       </div>
     </div>
   );

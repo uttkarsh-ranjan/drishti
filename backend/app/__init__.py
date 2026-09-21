@@ -24,10 +24,8 @@ def create_app():
     # Initialize Celery
     init_celery(app)
 
-    # Create tables (for development only, use migrations in production)
     with app.app_context():
-        # db.create_all() # Uncomment when PostGIS is fully available to create tables
-        pass
+        db.create_all()
 
     # Register blueprints
     from .routes import bp as main_bp
