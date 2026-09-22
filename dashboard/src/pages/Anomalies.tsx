@@ -62,7 +62,7 @@ const Anomalies = () => {
               <div className="mt-4 flex gap-3">
                 <button 
                   onClick={() => {
-                    alert(`Corrective action assigned for anomaly #${alert.id}. Notice dispatched.`);
+                    window.alert(`Corrective action assigned for anomaly #${alert.id}. Notice dispatched.`);
                     setAnomalies(prev => prev.filter(a => a.id !== alert.id));
                   }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium">
