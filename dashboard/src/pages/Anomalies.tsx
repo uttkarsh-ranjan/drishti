@@ -61,12 +61,17 @@ const Anomalies = () => {
               
               <div className="mt-4 flex gap-3">
                 <button 
-                  onClick={() => alert(`Action assigned for anomaly #${alert.id}`)}
+                  onClick={() => {
+                    alert(`Corrective action assigned for anomaly #${alert.id}. Notice dispatched.`);
+                    setAnomalies(prev => prev.filter(a => a.id !== alert.id));
+                  }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium">
                   Verify & Assign Corrective Action
                 </button>
                 <button 
-                  onClick={() => alert(`Anomaly #${alert.id} marked as False Positive`)}
+                  onClick={() => {
+                    setAnomalies(prev => prev.filter(a => a.id !== alert.id));
+                  }}
                   className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded text-sm font-medium">
                   Mark as False Positive
                 </button>

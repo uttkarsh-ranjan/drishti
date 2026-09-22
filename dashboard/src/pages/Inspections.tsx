@@ -44,7 +44,22 @@ const Inspections = () => {
           <h2 className="text-3xl font-bold text-slate-800">Inspection Logs</h2>
           <p className="text-slate-500">Immutable audit trail of all geo-tagged evidence.</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow">
+        <button 
+          onClick={() => {
+            const csv = ['ID,NGO Name,Inspector,Timestamp,Status,Evidence Hash'];
+            inspections.forEach(i => {
+              csv.push(`${i.id},"${i.ngo_name}","${i.inspector_name}",${i.timestamp},${i.status},${i.evidence_hash}`);
+            });
+            const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'inspection_logs.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+          }}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow"
+        >
           Export Report
         </button>
       </div>
