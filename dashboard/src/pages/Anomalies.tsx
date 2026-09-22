@@ -23,7 +23,8 @@ const Anomalies = () => {
 
   useEffect(() => {
     // Fetch anomalies from Flask API
-    axios.get('http://localhost:5000/api/anomalies')
+    const apiBase = `http://${window.location.hostname}:5000`;
+    axios.get(`${apiBase}/api/anomalies`)
       .then(response => {
         setAnomalies(response.data);
         setLoading(false);

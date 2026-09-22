@@ -42,7 +42,7 @@ def login():
 
     user = User.query.filter_by(email=email).first()
     if user and bcrypt.check_password_hash(user.password_hash, password):
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         return jsonify(access_token=access_token, role=user.role.name), 200
 
     return jsonify({"msg": "Bad email or password"}), 401
@@ -112,6 +112,7 @@ def get_anomalies():
             ]
         }
     ]
+    return jsonify(mock_anomalies), 200
 
 from .utils import verify_hash, get_exif_datetime, verify_timestamp
 from sqlalchemy import func

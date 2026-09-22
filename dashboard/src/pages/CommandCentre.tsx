@@ -11,7 +11,8 @@ const CommandCentre = () => {
   const [joinVC, setJoinVC] = useState(false);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/livekit/token?room=command_centre')
+    const apiBase = `http://${window.location.hostname}:5000`;
+    axios.get(`${apiBase}/api/livekit/token?room=command_centre`)
       .then(res => setLiveKitToken(res.data.token))
       .catch(() => setTokenError('Could not fetch LiveKit token. Ensure you are logged in and the backend is running.'));
   }, []);

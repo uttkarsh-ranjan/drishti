@@ -14,7 +14,7 @@ import 'dart:convert';
 // On Linux/Chrome desktop, use localhost directly.
 const String kApiBase = String.fromEnvironment(
   'API_BASE',
-  defaultValue: 'http://localhost:5000',
+  defaultValue: 'http://192.168.0.116:5000',
 );
 
 List<CameraDescription> cameras = [];

@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate, Navigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
-  const { login } = useAuth();
+  const { login, token } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // If already logged in, redirect to dashboard
+  if (token) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
+      console.log('Attempting login for', email);
       await login(email, password);
-    } catch {
-      setError('Invalid email or password. Please try again.');
+      console.log('Login successful, navigating to /');
+      navigate('/');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError('Invalid email or password, or server is unreachable.');
     } finally {
       setLoading(false);
     }

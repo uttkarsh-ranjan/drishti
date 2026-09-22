@@ -18,7 +18,11 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('access_token'));
+  const [token, setToken] = useState<string | null>(() => {
+    const t = localStorage.getItem('access_token');
+    if (t) axios.defaults.headers.common['Authorization'] = `Bearer ${t}`;
+    return t;
+  });
   const [role, setRole] = useState<string | null>(() => localStorage.getItem('role'));
 
   useEffect(() => {
@@ -30,7 +34,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [token]);
 
   const login = async (email: string, password: string) => {
-    const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+    const apiBase = `http://${window.location.hostname}:5000`;
+    const res = await axios.post(`${apiBase}/api/auth/login`, { email, password });
     const { access_token, role: userRole } = res.data;
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('role', userRole);
