@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -6,6 +6,25 @@ const Sidebar = () => {
   const location = useLocation();
   const { logout, role } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   const links = [
     { path: '/', label: '📹 Live Command Centre' },
@@ -39,7 +58,7 @@ const Sidebar = () => {
         </ul>
       </nav>
 
-      <div className="mt-auto relative">
+      <div className="mt-auto relative" ref={dropdownRef}>
         {/* Dropdown Menu */}
         {menuOpen && (
           <div className="absolute bottom-full left-0 w-full mb-2 bg-slate-700 rounded-md shadow-lg overflow-hidden border border-slate-600">
