@@ -50,14 +50,17 @@ const CommandCentre = () => {
 
       {/* CCTV Grid (MediaMTX Streams) */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {[1, 2, 3, 4, 5, 6].map((feed) => (
+        {[1, 2, 3].map((feed) => (
           <div key={feed} className="bg-black rounded-lg overflow-hidden shadow-lg aspect-video relative">
-            {/* In production: <iframe src={`http://localhost:8888/ngo_${feed}/`} /> */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
-              <span className="text-4xl mb-2">📹</span>
-              <p>MediaMTX WebRTC Stream {feed}</p>
-              <p className="text-xs text-green-500 mt-2">● LIVE | NGO ID: {1000 + feed}</p>
-              <p className="text-xs text-slate-600 mt-1">RTSP → WebRTC via :8889</p>
+            <iframe 
+              src={`http://localhost:8889/ngo_${feed}/`} 
+              className="absolute inset-0 w-full h-full border-0"
+              title={`MediaMTX Stream NGO ${feed}`}
+            />
+            <div className="absolute top-2 left-2 pointer-events-none">
+              <p className="text-xs text-green-500 font-bold bg-black/60 px-2 py-1 rounded shadow">
+                ● LIVE | NGO {feed}
+              </p>
             </div>
           </div>
         ))}

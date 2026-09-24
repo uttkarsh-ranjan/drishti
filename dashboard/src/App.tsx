@@ -5,9 +5,11 @@ import CommandCentre from './pages/CommandCentre';
 import Anomalies from './pages/Anomalies';
 import Inspections from './pages/Inspections';
 import Login from './pages/Login';
+import Profile from './pages/Profile';
+import AddNgo from './pages/AddNgo';
 
 const ProtectedLayout = () => {
-  const { token } = useAuth();
+  const { token, role } = useAuth();
   if (!token) return <Navigate to="/login" replace />;
   return (
     <div className="flex min-h-screen bg-slate-100 font-sans">
@@ -17,6 +19,8 @@ const ProtectedLayout = () => {
           <Route path="/" element={<CommandCentre />} />
           <Route path="/anomalies" element={<Anomalies />} />
           <Route path="/inspections" element={<Inspections />} />
+          <Route path="/profile" element={<Profile />} />
+          {role === 'DoSJE_Official' && <Route path="/add-ngo" element={<AddNgo />} />}
         </Routes>
       </main>
     </div>

@@ -9,6 +9,8 @@ const Sidebar = () => {
     { path: '/', label: '📹 Live Command Centre' },
     { path: '/anomalies', label: '⚠️ AI Risk Alerts' },
     { path: '/inspections', label: '📋 Inspection Logs' },
+    ...(role === 'DoSJE_Official' ? [{ path: '/add-ngo', label: '🏢 Add NGO' }] : []),
+    { path: '/profile', label: '👤 Profile' },
   ];
 
   return (
