@@ -214,3 +214,98 @@ def get_livekit_token():
     ))
 
     return jsonify({"token": token.to_jwt()}), 200
+
+@bp.route('/api/ngos', methods=['POST'])
+@jwt_required()
+def add_ngo():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if user.role.name != 'DoSJE_Official':
+        return jsonify({"msg": "Unauthorized"}), 403
+
+    data = request.get_json()
+    name = data.get('name')
+    registration_number = data.get('registration_number')
+    lat = data.get('lat')
+    lon = data.get('lon')
+    rtsp_url = data.get('rtsp_url')
+    admin_id = data.get('admin_id')
+
+    if not all([name, registration_number, lat, lon]):
+        return jsonify({"msg": "Missing required fields"}), 400
+
+    point = f"SRID=4326;POINT({lon} {lat})"
+    new_ngo = Institution(
+        name=name,
+        registration_number=registration_number,
+        location=point,
+        rtsp_url=rtsp_url,
+        admin_id=admin_id
+    )
+    db.session.add(new_ngo)
+    db.session.commit()
+    
+    return jsonify({"msg": "NGO added successfully", "id": new_ngo.id}), 201
+
+@bp.route('/api/assignments/current', methods=['GET'])
+@jwt_required()
+def get_current_assignment():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if user.role.name != 'PMU_Inspector':
+        return jsonify({"msg": "Unauthorized"}), 403
+
+    assignment = Assignment.query.filter_by(inspector_id=current_user_id, status='Pending').first()
+    if not assignment:
+        return jsonify({"msg": "No assignments yet"}), 404
+
+    institution = Institution.query.get(assignment.institution_id)
+    point = db.session.query(func.ST_X(institution.location).label('lon'), func.ST_Y(institution.location).label('lat')).first()
+
+    return jsonify({
+        "id": assignment.id,
+        "ngo_name": institution.name,
+        "ngo_lat": point.lat if point else None,
+        "ngo_lon": point.lon if point else None,
+        "scheduled_date": assignment.scheduled_date.isoformat()
+    }), 200
+
+@bp.route('/api/evidence/history', methods=['GET'])
+@jwt_required()
+def get_evidence_history():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if user.role.name != 'PMU_Inspector':
+        return jsonify({"msg": "Unauthorized"}), 403
+
+    logs = db.session.query(InspectionLog, Institution.name).select_from(InspectionLog).join(Assignment, InspectionLog.assignment_id == Assignment.id).join(Institution, Assignment.institution_id == Institution.id).filter(Assignment.inspector_id == current_user_id).all()
+    
+    result = []
+    for log, ngo_name in logs:
+        result.append({
+            "id": log.id,
+            "assignment_id": log.assignment_id,
+            "ngo_name": ngo_name,
+            "status": log.status,
+            "capture_time": log.capture_time.isoformat() if log.capture_time else None,
+            "distance": log.distance_from_centroid
+        })
+    return jsonify(result), 200
+
+@bp.route('/api/users/profile', methods=['POST'])
+@jwt_required()
+def update_profile():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    data = request.get_json()
+    new_password = data.get('password')
+    
+    if new_password:
+        user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        
+    if 'email' in data:
+        user.email = data['email']
+        
+    db.session.commit()
+    return jsonify({"msg": "Profile updated successfully"}), 200
