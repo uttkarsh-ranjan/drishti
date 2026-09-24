@@ -1,16 +1,16 @@
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
   const location = useLocation();
   const { logout, role } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const links = [
     { path: '/', label: '📹 Live Command Centre' },
     { path: '/anomalies', label: '⚠️ AI Risk Alerts' },
-    { path: '/inspections', label: '📋 Inspection Logs' },
-    ...(role === 'DoSJE_Official' ? [{ path: '/add-ngo', label: '🏢 Add NGO' }] : []),
-    { path: '/profile', label: '👤 Profile' },
+    { path: '/inspections', label: '📋 Inspection Logs' }
   ];
 
   return (
@@ -39,15 +39,33 @@ const Sidebar = () => {
         </ul>
       </nav>
 
-      <div className="mt-auto p-4 bg-slate-800 rounded-md">
-        <p className="text-sm font-semibold">Logged in as:</p>
-        <p className="text-xs text-blue-300 mb-3">{role ?? 'DoSJE Official'}</p>
-        <button
-          onClick={logout}
-          className="w-full text-xs bg-red-700 hover:bg-red-600 text-white py-1.5 rounded transition-colors"
+      <div className="mt-auto relative">
+        {/* Dropdown Menu */}
+        {menuOpen && (
+          <div className="absolute bottom-full left-0 w-full mb-2 bg-slate-700 rounded-md shadow-lg overflow-hidden border border-slate-600">
+            <Link 
+              to="/profile" 
+              onClick={() => setMenuOpen(false)}
+              className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-slate-600 transition-colors"
+            >
+              Change Password
+            </Link>
+            <button
+              onClick={logout}
+              className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-600 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
+        
+        <div 
+          className="p-4 bg-slate-800 rounded-md cursor-pointer hover:bg-slate-700 transition-colors"
+          onClick={() => setMenuOpen(!menuOpen)}
         >
-          Sign Out
-        </button>
+          <p className="text-sm font-semibold">👤 Profile</p>
+          <p className="text-xs text-blue-300">{role ?? 'DoSJE Official'} {menuOpen ? '▴' : '▾'}</p>
+        </div>
       </div>
     </div>
   );
