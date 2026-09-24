@@ -163,7 +163,15 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email')),
             TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: null,
+                child: const Text('Forgot Password?'),
+              ),
+            ),
+            const SizedBox(height: 10),
             _loading 
               ? const CircularProgressIndicator()
               : ElevatedButton(onPressed: _login, child: const Text('Login')),
@@ -537,8 +545,6 @@ class _ProfileTabState extends State<ProfileTab> {
             _loading 
               ? const CircularProgressIndicator()
               : ElevatedButton(onPressed: _updatePassword, child: const Text('Change Password')),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: null, child: const Text('Forgot Password (Disabled)')),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _logout,

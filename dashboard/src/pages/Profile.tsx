@@ -60,11 +60,8 @@ const Profile = () => {
           </div>
           
           <div className="flex gap-4">
-            <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors">
+            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors">
               Update Password
-            </button>
-            <button type="button" disabled className="flex-1 bg-slate-300 text-slate-500 font-semibold py-2 px-4 rounded cursor-not-allowed">
-              Forgot Password
             </button>
           </div>
         </form>

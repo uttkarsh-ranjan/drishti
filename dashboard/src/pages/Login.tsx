@@ -52,7 +52,12 @@ const Login: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-slate-700">Password</label>
+              <button type="button" disabled className="text-sm text-slate-400 cursor-not-allowed">
+                Forgot Password?
+              </button>
+            </div>
             <input
               type="password"
               value={password}
